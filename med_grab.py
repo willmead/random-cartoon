@@ -1,11 +1,8 @@
 import os
 import random
-import ssl
 
 import requests
 from bs4 import BeautifulSoup
-
-ssl._create_default_https_context = ssl._create_unverified_context
 
 # The Cartoons are found on this website
 URL = 'https://www.b98.tv/'
