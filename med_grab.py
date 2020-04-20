@@ -77,7 +77,7 @@ while searching:
         print('Web site exists')
         # This might fail if the video's title doesn't match
         # the file's title.
-        os.system(f"python cocoavlc.py '{video_url}'")
+        os.system(f"python3 cocoavlc.py '{video_url}'")
         searching = False
     else:
         print('Web site does not exist')
