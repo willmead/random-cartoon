@@ -1,5 +1,6 @@
 import os
 import random
+import string
 
 import requests
 from bs4 import BeautifulSoup
@@ -7,14 +8,13 @@ from bs4 import BeautifulSoup
 # The Cartoons are found on this website
 URL = 'https://www.b98.tv/'
 
-# Create Headers Neatly (taken from HTTP Request in dev tools)
+# Create Headers neatly (taken from HTTP Request in dev tools)
 # We need a user agent otherwise the page returns a 403
 UAA = 'Mozilla/5.0'
 OS = '(Macintosh; Intel Mac OS X 10_13_6)'
 ENGINE = 'AppleWebKit/537.36 (KHTML, like Gecko)'
 CLIENT = 'Chrome/81.0.4044.113 Safari/537.36'
-USER_AGENT = f'{UAA} {OS} {ENGINE} {CLIENT}'
-HEADERS = {'User-Agent':  USER_AGENT}
+HEADERS = {'User-Agent':  f'{UAA} {OS} {ENGINE} {CLIENT}'}
 
 
 def get_page(url):
@@ -23,59 +23,50 @@ def get_page(url):
     return BeautifulSoup(result, 'html.parser')
 
 
-def get_cartoon_url(url):
-    '''returns a list of cartoon series'''
-    cartoons_page = get_page(url)
-    cartoons = cartoons_page.find_all(class_='item')
-    return random.choice(cartoons).a['href']
+def clean_title(title):
+    '''returns a string with punctuation removed
+    and hypens instead of spaces'''
+    title.translate(str.maketrans('', '', string.punctuation))
+    title = title.replace(' ', '-')
+    return title
 
 
-def get_episode_url(episodes_url):
-    episodes_page = get_page(episodes_url)
-    episodes = episodes_page.find_all(class_='item')
-    return random.choice(episodes).a['href']
+def get_item_url(url):
+    '''On the cartoon website all lists contain
+    *items*. This returns the url to a random item'''
+    page = get_page(url)
+    items = page.find_all(class_='item')
+    return random.choice(items).a['href']
 
 
 def get_video_url(episode_url):
+    '''guess the name of a specific video by grabbing its title,
+    cleaning it and then appending .mp4'''
     video_page = get_page(episode_url)
-    title = video_page.find(class_='post-title')
-    stripped_title = title.text.strip()
-
-    # We are essentially just guessing what the
-    # title is, generally that means removing punctuation,
-    # and replacing spaces with hyphens
-    if stripped_title[0] == '-':
-        stripped_title.remove('-')
-    stripped_title = stripped_title.replace(' ', '-')
-    stripped_title = stripped_title.replace("’", '')
-    stripped_title = stripped_title.replace("'", '')
-    stripped_title = stripped_title.replace(',', '')
-    stripped_title = stripped_title.replace('!', '')
-    stripped_title = stripped_title.replace('?', '')
-
-    return f"https://www.b98.tv/video/{stripped_title}.mp4"
+    title = video_page.find(class_='post-title').text
+    cleaned_title = clean_title(title)
+    return f"https://www.b98.tv/video/{cleaned_title}.mp4"
 
 
-# Main Loop
-searching = True
-while searching:
-    cartoon_url = get_cartoon_url(URL)
-    episode_url = get_episode_url(cartoon_url)
+def is_valid_url(url):
+    result = requests.head(url, headers=HEADERS, allow_redirects=False)
+    return result.status_code == 200
+
+
+def main():
+    cartoon_url = get_item_url(URL)
+    episode_url = get_item_url(cartoon_url)
     video_url = get_video_url(episode_url)
 
-    # For Debugging Purposes
-    print(f'Cartoon URL: {cartoon_url}')
-    print(f'Episode URL: {episode_url}')
-    print(f'Video URL: {video_url}')
-
-    # We need to test if the video exists, we do this by getting
-    # the head of the HTTP request.
-    result = requests.head(video_url, headers=HEADERS, allow_redirects=False)
-    if result.status_code == 200:
-        print('Web site exists')
-        # This might fail if the video's title doesn't match
-        # the file's title.
+    if is_valid_url(video_url):
         os.system(f"python3 cocoavlc.py '{video_url}'")
-        searching = False
     else:
-        print('Web site does not exist')
+        print(f'Cartoon URL: {cartoon_url}')
+        print(f'Episode URL: {episode_url}')
+        print(f'Video URL: {video_url}')
+        print("URL not valid, trying again.")
+        main()
+
+
+if __name__ == "__main__":
+    main()
