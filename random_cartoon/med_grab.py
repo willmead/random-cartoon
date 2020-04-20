@@ -16,6 +16,7 @@ CLIENT = 'Chrome/81.0.4044.113 Safari/537.36'
 USER_AGENT = f'{UAA} {OS} {ENGINE} {CLIENT}'
 HEADERS = {'User-Agent':  USER_AGENT}
 
+
 def get_page(url):
     '''returns a parsed html page'''
     result = requests.get(url, headers=HEADERS).text
